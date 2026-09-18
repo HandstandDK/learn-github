@@ -209,7 +209,7 @@
       <h1>📰 News Word Quiz</h1>
       <p class="score">Score: <strong id="scoreEl">0 / 0</strong></p>
     </div>
-    <span class="version">v0.2</span>
+    <span class="version">v0.3</span>
   </header>
 
   <div class="categories">
@@ -306,7 +306,8 @@ let hnPage      = 0;
 let score = 0, total = 0;
 let timerStart  = null;
 let timerTick   = null;
-const tipCache  = new Map();
+const tipCache   = new Map();
+const wrongCache = new Map(); // word → thesaurus candidates from Datamuse
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -330,17 +331,49 @@ function buildPool(headlines, cat) {
   return [...s];
 }
 
-function wrongAnswers(correct) {
+// Fetch semantically similar words from Datamuse (free thesaurus API)
+async function fetchDatamuse(word) {
+  if (wrongCache.has(word)) return;
+  try {
+    const url = `https://api.datamuse.com/words?ml=${encodeURIComponent(word)}&max=20`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(4000) }).then(r => r.json());
+    const cands = (res || [])
+      .map(x => x.word)
+      .filter(x => x.toLowerCase() !== word && !x.includes(' ') && /^[a-zA-Z]+$/.test(x));
+    if (cands.length >= 2) wrongCache.set(word, cands);
+  } catch {}
+}
+
+async function prefetchWrong(words) {
+  await Promise.all(words.map(fetchDatamuse));
+}
+
+function wrongAnswers(correct, lang) {
   const cl = correct.toLowerCase();
+
+  // 1. Datamuse thesaurus (English)
+  if (lang === 'en' && wrongCache.has(cl)) {
+    const from  = wrongCache.get(cl).filter(w => w.toLowerCase() !== cl);
+    const close = from.filter(w => Math.abs(w.length - correct.length) <= 4);
+    const src   = close.length >= 2 ? close : from;
+    if (src.length >= 2) return shuf(src).slice(0, 2);
+  }
+
+  // 2. Pool with tight length match (±2 chars)
+  const tight = pool.filter(w => w.toLowerCase() !== cl && Math.abs(w.length - correct.length) <= 2);
+  if (tight.length >= 2) return shuf(tight).slice(0, 2);
+
+  // 3. Pool with relaxed length (±4 chars)
   return shuf(pool.filter(w => w.toLowerCase() !== cl && Math.abs(w.length - correct.length) <= 4)).slice(0, 2);
 }
 
 function makeQ(h, cat) {
+  const lang  = CATS[cat]?.lang || 'en';
   const words = quizWords(h.title, cat);
   if (!words.length) return null;
   const sorted = [...words].sort((a, b) => clean(b).length - clean(a).length);
   const target = sorted[Math.floor(Math.random() * Math.min(3, sorted.length))];
-  const wrong  = wrongAnswers(clean(target));
+  const wrong  = wrongAnswers(clean(target), lang);
   if (wrong.length < 2) return null;
   const cl = clean(target).toLowerCase();
   let done = false;
@@ -444,8 +477,21 @@ async function loadCat(catKey, isRefresh = false) {
   }
 
   pool = buildPool(headlines, catKey);
+  const lang       = CATS[catKey]?.lang || 'en';
   const candidates = shuf(headlines.filter(h => quizWords(h.title, catKey).length >= 1));
-  queue  = candidates.slice(0, BATCH).map(h => makeQ(h, catKey)).filter(Boolean);
+  const batch      = candidates.slice(0, BATCH);
+
+  // Pre-fetch thesaurus alternatives for all potential quiz words (English only)
+  if (lang === 'en') {
+    const batchWords = new Set();
+    batch.forEach(h => quizWords(h.title, catKey).forEach(w => {
+      const c = clean(w).toLowerCase(); if (c) batchWords.add(c);
+    }));
+    document.getElementById('loadMsg').textContent = 'Preparing questions…';
+    await prefetchWrong([...batchWords]);
+  }
+
+  queue  = batch.map(h => makeQ(h, catKey)).filter(Boolean);
   qIdx   = 0;
   batchPos = 0;
 

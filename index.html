@@ -199,6 +199,104 @@
 
     .tip-pub  { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 0.3rem; }
     .tip-desc { color: #cbd5e1; line-height: 1.5; }
+
+    /* ── THEME SWITCHER ── */
+    .theme-row {
+      display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.9rem;
+    }
+    .theme-label { font-size: 0.7rem; color: #475569; margin-right: 0.2rem; white-space: nowrap; }
+    .tpk {
+      padding: 0.28rem 0.7rem; font-size: 0.75rem;
+      background: transparent; border: 1.5px solid #334155;
+      border-radius: 999px; color: #64748b; cursor: pointer; transition: all 0.13s;
+    }
+    .tpk:hover  { border-color: #818cf8; color: #c7d2fe; }
+    .tpk.active { border-color: #6366f1; background: #1e1b4b; color: #e0e7ff; font-weight: 600; }
+
+    /* ── THEME 2: BOLD ── */
+    html.t2 body { background: #050505; }
+    html.t2 h1 { font-size: 2rem; color: #fbbf24; letter-spacing: -0.02em; }
+    html.t2 .score { font-size: 0.9rem; }
+    html.t2 .score strong { color: #fbbf24; }
+    html.t2 .headline { font-size: 2rem; line-height: 1.45; font-weight: 900; color: #fff; margin-bottom: 2rem; }
+    html.t2 .blank { background: #1c1000; border-bottom: 3px solid #fbbf24; min-width: 8rem; height: 2.1rem; }
+    html.t2 .opt { font-size: 1.28rem; padding: 1.05rem 1.4rem; font-weight: 800; border-width: 2.5px; }
+    html.t2 .opt:hover:not(:disabled) { border-color: #fbbf24; background: #1c1000; color: #fef3c7; }
+    html.t2 .opt.correct { border-color: #22c55e; background: #052e16; color: #86efac; }
+    html.t2 .opt.wrong   { border-color: #ef4444; background: #450a0a; color: #fca5a5; }
+    html.t2 .card { padding: 2.2rem; border: 2px solid #1f1f1f; }
+    html.t2 .tag { font-size: 0.78rem; letter-spacing: 0.18em; color: #4b5563; }
+    html.t2 .timer { font-size: 0.95rem; font-weight: 800; }
+    html.t2 .timer.running { color: #fbbf24; }
+    html.t2 .timer.done    { color: #4ade80; }
+    html.t2 .feedback { font-size: 1rem; }
+    html.t2 .next-btn { font-size: 1.1rem; padding: 0.95rem; background: #b45309; }
+    html.t2 .next-btn:hover { background: #92400e; }
+    html.t2 .dot.current { background: #fbbf24; }
+    html.t2 .dot.done    { background: #fbbf24; opacity: 0.45; }
+    html.t2 .cat { font-size: 0.85rem; font-weight: 700; }
+    html.t2 .cat.active { background: #1c1000; border-color: #fbbf24; color: #fef3c7; }
+    html.t2 .cat:hover  { border-color: #fbbf24; color: #fef3c7; }
+    html.t2 .tpk.active { background: #1c1000; border-color: #fbbf24; color: #fef3c7; }
+    html.t2 .tpk:hover  { border-color: #fbbf24; color: #fef3c7; }
+    html.t2 .refresh:hover { border-color: #fbbf24; color: #fbbf24; }
+    html.t2 .version { border-color: #fbbf24; color: #fbbf24; background: #1c1000; }
+    html.t2 .state h2 { color: #fbbf24; }
+    html.t2 .spinner  { border-color: #1f1a00; border-top-color: #fbbf24; }
+
+    /* ── THEME 3: NATURE ── */
+    html.t3 body {
+      background: #0d1f0d url('https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1400&q=75') center/cover fixed;
+    }
+    html.t3 body::before {
+      content: ''; position: fixed; inset: 0;
+      background: rgba(0,15,5,0.52); pointer-events: none; z-index: 0;
+    }
+    html.t3 .container { position: relative; z-index: 1; }
+    html.t3 h1 { color: #d4f7d4; text-shadow: 0 2px 10px rgba(0,0,0,0.7); }
+    html.t3 .score strong { color: #86efac; }
+    html.t3 .version { background: rgba(10,30,10,0.7); border-color: rgba(134,239,172,0.35); color: #86efac; }
+    html.t3 .cat { border-color: rgba(134,239,172,0.2); color: rgba(134,239,172,0.55); }
+    html.t3 .cat:hover  { border-color: #4ade80; color: #d4f7d4; background: rgba(10,40,15,0.5); }
+    html.t3 .cat.active { border-color: #4ade80; background: rgba(10,40,15,0.65); color: #d4f7d4; }
+    html.t3 .tpk { border-color: rgba(134,239,172,0.2); color: rgba(134,239,172,0.55); }
+    html.t3 .tpk:hover  { border-color: #4ade80; color: #d4f7d4; }
+    html.t3 .tpk.active { border-color: #4ade80; background: rgba(10,40,15,0.65); color: #d4f7d4; }
+    html.t3 .card {
+      background: rgba(5,20,8,0.6);
+      backdrop-filter: blur(18px) saturate(1.4);
+      -webkit-backdrop-filter: blur(18px) saturate(1.4);
+      border-color: rgba(74,222,128,0.2);
+      padding-top: 0; overflow: hidden;
+    }
+    html.t3 #gameEl  { padding: 1.75rem; }
+    html.t3 #pickState, html.t3 #loadState { padding: 2.75rem 1.75rem; }
+    html.t3 .tag { color: rgba(74,222,128,0.55); }
+    html.t3 .timer.running { color: #86efac; }
+    html.t3 .timer.done    { color: #4ade80; }
+    html.t3 .headline { color: #e8f5e8; }
+    html.t3 .blank { background: rgba(10,50,15,0.7); border-bottom-color: #4ade80; }
+    html.t3 .dot.current { background: #4ade80; }
+    html.t3 .dot.done    { background: #166534; }
+    html.t3 .opt { background: rgba(10,35,12,0.55); border-color: rgba(74,222,128,0.2); color: #c8eec8; }
+    html.t3 .opt:hover:not(:disabled) { border-color: #4ade80; background: rgba(20,60,25,0.65); color: #e8f5e8; }
+    html.t3 .opt.correct { border-color: #22c55e; background: rgba(5,46,22,0.8); color: #86efac; }
+    html.t3 .opt.wrong   { border-color: #ef4444; background: rgba(69,10,10,0.8); color: #fca5a5; }
+    html.t3 .feedback.ok  { background: rgba(5,46,22,0.65); border-color: rgba(22,101,52,0.5); color: #86efac; }
+    html.t3 .feedback.bad { background: rgba(69,10,10,0.65); border-color: rgba(153,27,27,0.5); color: #fca5a5; }
+    html.t3 .feedback.ok a { color: #4ade80; }
+    html.t3 .next-btn { background: #166534; }
+    html.t3 .next-btn:hover { background: #14532d; }
+    html.t3 .refresh { border-color: rgba(74,222,128,0.2); color: rgba(74,222,128,0.5); }
+    html.t3 .refresh:hover { border-color: #4ade80; color: #4ade80; }
+    html.t3 .state h2 { color: #86efac; }
+    html.t3 .state p  { color: rgba(74,222,128,0.45); }
+    html.t3 .spinner  { border-color: rgba(74,222,128,0.2); border-top-color: #4ade80; }
+
+    /* Category image strip (nature theme) */
+    #catImgWrap { display: none; margin: 0 -1.75rem 1.5rem; }
+    html.t3 #catImgWrap.show { display: block; }
+    #catImg { width: 100%; height: 170px; object-fit: cover; display: block; }
   </style>
 </head>
 <body>
@@ -211,6 +309,13 @@
     </div>
     <span class="version">v0.3</span>
   </header>
+
+  <div class="theme-row">
+    <span class="theme-label">Theme:</span>
+    <button class="tpk" data-theme="t1">🌑 Cyber</button>
+    <button class="tpk" data-theme="t2">⚡ Bold</button>
+    <button class="tpk" data-theme="t3">🌿 Nature</button>
+  </div>
 
   <div class="categories">
     <button class="cat" data-cat="sport">⚽ Sport</button>
@@ -228,6 +333,7 @@
   </div>
 
   <div class="card">
+    <div id="catImgWrap"><img id="catImg" src="" alt=""></div>
     <div class="state" id="pickState">
       <h2>Pick a category above</h2>
       <p>Choose a topic to load 5 fresh headlines</p>
@@ -501,6 +607,7 @@ async function loadCat(catKey, isRefresh = false) {
   }
 
   showState('game');
+  updateCatImage();
   showQ();
 }
 
@@ -696,6 +803,45 @@ function tipMove(e) {
 }
 
 function tipHide() { tipEl.classList.remove('show'); tipUrl = null; }
+
+// ── Themes ────────────────────────────────────────────────────────────────
+
+const CAT_IMAGES = {
+  sport:    'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=660&h=170&q=75',
+  science:  'https://images.unsplash.com/photo-1507413245164-6160d8298b31?auto=format&fit=crop&w=660&h=170&q=75',
+  ai:       'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=660&h=170&q=75',
+  danish:   'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=660&h=170&q=75',
+  european: 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=660&h=170&q=75',
+  american: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=660&h=170&q=75',
+};
+
+function updateCatImage() {
+  const wrap = document.getElementById('catImgWrap');
+  const img  = document.getElementById('catImg');
+  const isNature = document.documentElement.classList.contains('t3');
+  if (isNature && currentCat && CAT_IMAGES[currentCat]) {
+    img.src = CAT_IMAGES[currentCat];
+    wrap.classList.add('show');
+  } else {
+    wrap.classList.remove('show');
+    img.src = '';
+  }
+}
+
+function applyTheme(t) {
+  document.documentElement.className = t;
+  document.querySelectorAll('.tpk').forEach(b =>
+    b.classList.toggle('active', b.dataset.theme === t)
+  );
+  localStorage.setItem('quiz-theme', t);
+  updateCatImage();
+}
+
+document.querySelectorAll('.tpk').forEach(btn =>
+  btn.addEventListener('click', () => applyTheme(btn.dataset.theme))
+);
+
+applyTheme(localStorage.getItem('quiz-theme') || 't1');
 </script>
 </body>
 </html>

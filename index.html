@@ -106,6 +106,8 @@
     .meta { font-size: 0.75rem; color: #475569; margin-bottom: 1.25rem; }
     .meta a { color: #64748b; text-decoration: none; }
     .meta a:hover { color: #a78bfa; text-decoration: underline; }
+    .feedback.ok a { color: #4ade80; font-weight: 600; text-decoration: underline; margin-left: 0.5rem; }
+    .feedback.ok a:hover { color: #86efac; }
 
     .next-btn {
       width: 100%;
@@ -284,11 +286,7 @@
       });
       document.getElementById('feedbackEl').className = 'feedback';
       document.getElementById('nextBtn').className = 'next-btn';
-      try {
-        const domain = new URL(q.url).hostname.replace(/^www\./, '');
-        document.getElementById('metaEl').innerHTML =
-          `Source: <a href="${q.url}" target="_blank" rel="noopener noreferrer">${domain}</a>`;
-      } catch { document.getElementById('metaEl').textContent = ''; }
+      document.getElementById('metaEl').textContent = '';
     }
 
     function answer(chosen, correct, url) {
@@ -303,9 +301,13 @@
       });
       const fb = document.getElementById('feedbackEl');
       fb.className = `feedback show ${ok ? 'ok' : 'bad'}`;
-      fb.textContent = ok
-        ? `✅ Correct! "${correct}" is the missing word.`
-        : `❌ The missing word was "${correct}".`;
+      if (ok && url && url !== '#') {
+        fb.innerHTML = `✅ Correct! "${correct}" is the missing word. <a href="${url}" target="_blank" rel="noopener noreferrer">Read the article →</a>`;
+      } else {
+        fb.textContent = ok
+          ? `✅ Correct! "${correct}" is the missing word.`
+          : `❌ The missing word was "${correct}".`;
+      }
       document.getElementById('nextBtn').className = 'next-btn show';
     }
 

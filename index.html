@@ -2,10 +2,331 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>News Quiz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📰 News Word Quiz</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .container { width: 100%; max-width: 640px; }
+
+    header { text-align: center; margin-bottom: 2rem; }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #f8fafc;
+      letter-spacing: -0.03em;
+    }
+
+    .score { margin-top: 0.5rem; font-size: 0.9rem; color: #64748b; }
+    .score strong { color: #a78bfa; }
+
+    .card {
+      background: #1e293b;
+      border-radius: 1.25rem;
+      padding: 2rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      border: 1px solid #334155;
+    }
+
+    .tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #475569;
+      margin-bottom: 1.25rem;
+    }
+
+    .headline {
+      font-size: 1.2rem;
+      line-height: 1.7;
+      color: #f1f5f9;
+      margin-bottom: 2rem;
+      font-weight: 500;
+    }
+
+    .blank {
+      display: inline-block;
+      background: #1e3a5f;
+      border-radius: 0.375rem;
+      border-bottom: 2px solid #6366f1;
+      min-width: 5rem;
+      height: 1.6rem;
+      vertical-align: middle;
+      position: relative;
+      top: -2px;
+    }
+
+    .options { display: flex; flex-direction: column; gap: 0.625rem; margin-bottom: 1.5rem; }
+
+    .opt {
+      width: 100%;
+      padding: 0.8rem 1.25rem;
+      background: #0f172a;
+      border: 2px solid #334155;
+      border-radius: 0.75rem;
+      color: #cbd5e1;
+      font-size: 0.975rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s, color 0.12s;
+      text-align: left;
+    }
+
+    .opt:hover:not(:disabled) { border-color: #818cf8; background: #1e1b4b; color: #e0e7ff; }
+    .opt.correct { border-color: #22c55e; background: #052e16; color: #86efac; }
+    .opt.wrong   { border-color: #ef4444; background: #450a0a; color: #fca5a5; }
+    .opt:disabled { cursor: default; }
+
+    .feedback {
+      border-radius: 0.625rem;
+      padding: 0.875rem 1rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+      display: none;
+    }
+    .feedback.show { display: block; }
+    .feedback.ok  { background: #052e16; border: 1px solid #166534; color: #86efac; }
+    .feedback.bad { background: #3b0b0b; border: 1px solid #991b1b; color: #fca5a5; }
+
+    .meta { font-size: 0.75rem; color: #475569; margin-bottom: 1.25rem; }
+    .meta a { color: #64748b; text-decoration: none; }
+    .meta a:hover { color: #a78bfa; text-decoration: underline; }
+
+    .next-btn {
+      width: 100%;
+      padding: 0.875rem;
+      background: #4f46e5;
+      border: none;
+      border-radius: 0.75rem;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.12s;
+      display: none;
+      letter-spacing: -0.01em;
+    }
+    .next-btn:hover { background: #4338ca; }
+    .next-btn.show  { display: block; }
+
+    .loading { text-align: center; padding: 3rem 0; color: #475569; }
+
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid #1e3a5f;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
-  <h1>📰 News Word Quiz</h1>
-  <p>Coming soon.</p>
+  <div class="container">
+    <header>
+      <h1>📰 News Word Quiz</h1>
+      <p class="score">Score: <strong id="scoreDisplay">0 / 0</strong></p>
+    </header>
+    <div class="card">
+      <div class="loading" id="loadingEl">
+        <div class="spinner"></div>
+        <p>Fetching the latest headlines…</p>
+      </div>
+      <div id="gameEl" style="display:none">
+        <p class="tag">Guess the missing word</p>
+        <p class="headline" id="headlineEl"></p>
+        <div class="options" id="optionsEl"></div>
+        <div class="feedback" id="feedbackEl"></div>
+        <p class="meta" id="metaEl"></p>
+        <button class="next-btn" id="nextBtn" onclick="next()">Next headline →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STOP = new Set([
+      'the','a','an','is','are','was','were','be','been','being','have','has','had',
+      'do','does','did','will','would','could','should','may','might','shall','can',
+      'to','in','on','at','by','for','with','about','against','between','into',
+      'through','during','before','after','above','below','from','up','down','out',
+      'off','over','under','again','then','once','here','there','when','where','why',
+      'how','all','both','each','few','more','most','other','some','such','no','nor',
+      'not','only','own','same','so','than','too','very','just','but','if','or','as',
+      'and','of','it','its','this','that','these','those','he','she','they','we',
+      'you','his','her','their','our','your','my','me','him','us','them','who',
+      'which','what','new','says','say','said','also','now','get','make','take',
+      'come','per','via','non','anti','pro','co','ex','re','un','year','years',
+      'time','times','day','days','week','weeks','month','months',
+    ]);
+
+    const FALLBACK = [
+      { title: "Scientists Discover Ancient Ocean Beneath Arctic Ice", url: "#" },
+      { title: "Global Leaders Gather in London for Climate Summit", url: "#" },
+      { title: "Electric Vehicles Break Sales Record in European Market", url: "#" },
+      { title: "Astronomers Detect Mysterious Signal from Distant Galaxy", url: "#" },
+      { title: "Historic Peace Agreement Signed Between Rival Nations", url: "#" },
+      { title: "Tech Giant Unveils Revolutionary Battery Technology", url: "#" },
+      { title: "Researchers Find Breakthrough Treatment for Alzheimer Disease", url: "#" },
+      { title: "Massive Wildfire Threatens Coastal Communities in California", url: "#" },
+      { title: "Olympic Athletes Shatter World Records at Championship", url: "#" },
+      { title: "Central Banks Raise Interest Rates to Combat Inflation", url: "#" },
+      { title: "Archaeologists Uncover Hidden Temple in Peruvian Jungle", url: "#" },
+      { title: "Artificial Intelligence Beats Human Doctors at Diagnosis", url: "#" },
+      { title: "Renewable Energy Powers Half of European Electricity Grid", url: "#" },
+      { title: "Earthquake Strikes Capital City Causing Major Damage", url: "#" },
+      { title: "President Signs Historic Education Reform Bill into Law", url: "#" },
+      { title: "Tropical Storm Strengthens into Category Four Hurricane", url: "#" },
+      { title: "Record Breaking Heatwave Grips Northern Europe This Summer", url: "#" },
+      { title: "Space Agency Announces Crewed Mission to Asteroid Belt", url: "#" },
+      { title: "International Court Rules Against Nuclear Testing Agreement", url: "#" },
+      { title: "Major Bank Collapse Sends Shockwaves Through Financial Markets", url: "#" },
+    ];
+
+    function clean(w) { return w.replace(/[^a-zA-Z]/g, ''); }
+
+    function isQuizWord(w) {
+      const c = clean(w).toLowerCase();
+      return c.length >= 4 && !STOP.has(c) && !/^\d/.test(c);
+    }
+
+    function getWords(title) { return title.split(/\s+/).filter(isQuizWord); }
+
+    function shuffle(a) { return [...a].sort(() => Math.random() - 0.5); }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function buildBlank(title, word) {
+      const cl = clean(word).toLowerCase();
+      let done = false;
+      return title.split(' ').map(token => {
+        if (!done && clean(token).toLowerCase() === cl) { done = true; return '<span class="blank"></span>'; }
+        return escHtml(token);
+      }).join(' ');
+    }
+
+    let headlines = [], wordPool = [], queue = [], qIdx = 0, score = 0, total = 0;
+
+    async function fetchHeadlines() {
+      try {
+        const ids = await fetch('https://hacker-news.firebaseio.com/v2/topstories.json').then(r => r.json());
+        const items = await Promise.all(
+          ids.slice(0, 50).map(id =>
+            fetch(`https://hacker-news.firebaseio.com/v2/item/${id}.json`).then(r => r.json()).catch(() => null)
+          )
+        );
+        const good = items.filter(s =>
+          s && s.title && s.type === 'story' &&
+          !s.title.startsWith('Ask HN') && !s.title.startsWith('Show HN') && !s.title.startsWith('Tell HN') &&
+          getWords(s.title).length >= 1
+        ).map(s => ({ title: s.title, url: s.url || `https://news.ycombinator.com/item?id=${s.id}` }));
+        return good.length >= 8 ? good : FALLBACK;
+      } catch { return FALLBACK; }
+    }
+
+    function buildPool(hs) {
+      const s = new Set();
+      hs.forEach(h => getWords(h.title).forEach(w => { const c = clean(w); if (c) s.add(c); }));
+      return [...s];
+    }
+
+    function getWrong(correct) {
+      const cl = correct.toLowerCase();
+      return shuffle(wordPool.filter(w => w.toLowerCase() !== cl && Math.abs(w.length - correct.length) <= 4)).slice(0, 2);
+    }
+
+    function makeQ(h) {
+      const words = getWords(h.title);
+      if (!words.length) return null;
+      const target = shuffle([...words].sort((a, b) => clean(b).length - clean(a).length)).slice(0, 3)[0];
+      const wrong = getWrong(clean(target));
+      if (wrong.length < 2) return null;
+      return {
+        html: buildBlank(h.title, target),
+        answer: clean(target),
+        opts: shuffle([clean(target), ...wrong]),
+        url: h.url,
+      };
+    }
+
+    function updateScore() {
+      document.getElementById('scoreDisplay').textContent = `${score} / ${total}`;
+    }
+
+    function showQ(q) {
+      document.getElementById('headlineEl').innerHTML = q.html;
+      const el = document.getElementById('optionsEl');
+      el.innerHTML = '';
+      q.opts.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'opt';
+        btn.textContent = opt;
+        btn.addEventListener('click', () => answer(opt, q.answer, q.url));
+        el.appendChild(btn);
+      });
+      document.getElementById('feedbackEl').className = 'feedback';
+      document.getElementById('nextBtn').className = 'next-btn';
+      try {
+        const domain = new URL(q.url).hostname.replace(/^www\./, '');
+        document.getElementById('metaEl').innerHTML =
+          `Source: <a href="${q.url}" target="_blank" rel="noopener noreferrer">${domain}</a>`;
+      } catch { document.getElementById('metaEl').textContent = ''; }
+    }
+
+    function answer(chosen, correct, url) {
+      total++;
+      const ok = chosen.toLowerCase() === correct.toLowerCase();
+      if (ok) score++;
+      updateScore();
+      document.querySelectorAll('.opt').forEach(btn => {
+        btn.disabled = true;
+        if (btn.textContent.toLowerCase() === correct.toLowerCase()) btn.classList.add('correct');
+        else if (btn.textContent === chosen) btn.classList.add('wrong');
+      });
+      const fb = document.getElementById('feedbackEl');
+      fb.className = `feedback show ${ok ? 'ok' : 'bad'}`;
+      fb.textContent = ok
+        ? `✅ Correct! "${correct}" is the missing word.`
+        : `❌ The missing word was "${correct}".`;
+      document.getElementById('nextBtn').className = 'next-btn show';
+    }
+
+    function next() {
+      if (qIdx >= queue.length) {
+        queue = shuffle(headlines).map(makeQ).filter(Boolean);
+        qIdx = 0;
+      }
+      if (queue.length) showQ(queue[qIdx++]);
+    }
+
+    async function init() {
+      headlines = await fetchHeadlines();
+      wordPool  = buildPool(headlines);
+      queue     = shuffle(headlines).map(makeQ).filter(Boolean);
+      document.getElementById('loadingEl').style.display = 'none';
+      document.getElementById('gameEl').style.display = 'block';
+      if (queue.length) showQ(queue[qIdx++]);
+    }
+
+    init();
+  </script>
 </body>
 </html>

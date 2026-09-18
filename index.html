@@ -229,17 +229,15 @@
 
     async function fetchHeadlines() {
       try {
-        const ids = await fetch('https://hacker-news.firebaseio.com/v2/topstories.json').then(r => r.json());
-        const items = await Promise.all(
-          ids.slice(0, 50).map(id =>
-            fetch(`https://hacker-news.firebaseio.com/v2/item/${id}.json`).then(r => r.json()).catch(() => null)
-          )
-        );
-        const good = items.filter(s =>
-          s && s.title && s.type === 'story' &&
+        const data = await fetch('https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=50').then(r => r.json());
+        const good = (data.hits || []).filter(s =>
+          s.title &&
           !s.title.startsWith('Ask HN') && !s.title.startsWith('Show HN') && !s.title.startsWith('Tell HN') &&
           getWords(s.title).length >= 1
-        ).map(s => ({ title: s.title, url: s.url || `https://news.ycombinator.com/item?id=${s.id}` }));
+        ).map(s => ({
+          title: s.title,
+          url: s.url || `https://news.ycombinator.com/item?id=${s.objectID}`,
+        }));
         return good.length >= 8 ? good : FALLBACK;
       } catch { return FALLBACK; }
     }
@@ -302,11 +300,11 @@
       const fb = document.getElementById('feedbackEl');
       fb.className = `feedback show ${ok ? 'ok' : 'bad'}`;
       if (ok && url && url !== '#') {
-        fb.innerHTML = `✅ Correct! "${correct}" is the missing word. <a href="${url}" target="_blank" rel="noopener noreferrer">Read the article →</a>`;
+        fb.innerHTML = `✅ Correct! <strong>"${correct}"</strong> is the missing word. &nbsp;<a href="${url}" target="_blank" rel="noopener noreferrer">Read the article →</a>`;
+      } else if (ok) {
+        fb.textContent = `✅ Correct! "${correct}" is the missing word.`;
       } else {
-        fb.textContent = ok
-          ? `✅ Correct! "${correct}" is the missing word.`
-          : `❌ The missing word was "${correct}".`;
+        fb.textContent = `❌ The missing word was "${correct}".`;
       }
       document.getElementById('nextBtn').className = 'next-btn show';
     }

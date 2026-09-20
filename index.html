@@ -297,6 +297,39 @@
     #catImgWrap { display: none; margin: 0 -1.75rem 1.5rem; }
     html.t3 #catImgWrap.show { display: block; }
     #catImg { width: 100%; height: 170px; object-fit: cover; display: block; }
+
+    /* ── CUSTOM CATEGORY SEARCH ── */
+    .custom-row {
+      display: flex; gap: 0.5rem; margin-bottom: 0.75rem;
+    }
+    .custom-row input {
+      flex: 1; background: transparent; border: 1.5px solid #334155;
+      border-radius: 0.55rem; padding: 0.42rem 0.85rem;
+      color: #e2e8f0; font-size: 0.83rem; outline: none;
+      font-family: inherit; transition: border-color 0.13s;
+    }
+    .custom-row input:focus { border-color: #6366f1; }
+    .custom-row input::placeholder { color: #475569; }
+    .custom-row button {
+      padding: 0.42rem 1rem; background: #4f46e5; border: none;
+      border-radius: 0.55rem; color: #fff; font-size: 0.83rem;
+      font-weight: 600; cursor: pointer; white-space: nowrap;
+      transition: background 0.13s;
+    }
+    .custom-row button:hover { background: #4338ca; }
+    html.t2 .custom-row input { border-color: #1f1f1f; color: #fff; }
+    html.t2 .custom-row input:focus { border-color: #fbbf24; }
+    html.t2 .custom-row input::placeholder { color: #374151; }
+    html.t2 .custom-row button { background: #b45309; }
+    html.t2 .custom-row button:hover { background: #92400e; }
+    html.t3 .custom-row input {
+      border-color: rgba(74,222,128,0.2); color: #e8f5e8;
+      background: rgba(10,30,12,0.4);
+    }
+    html.t3 .custom-row input:focus { border-color: #4ade80; }
+    html.t3 .custom-row input::placeholder { color: rgba(74,222,128,0.35); }
+    html.t3 .custom-row button { background: #166534; }
+    html.t3 .custom-row button:hover { background: #14532d; }
   </style>
 </head>
 <body>
@@ -307,7 +340,7 @@
       <h1>📰 News Word Quiz</h1>
       <p class="score">Score: <strong id="scoreEl">0 / 0</strong></p>
     </div>
-    <span class="version">v0.3</span>
+    <span class="version">v0.4</span>
   </header>
 
   <div class="theme-row">
@@ -325,6 +358,11 @@
     <button class="cat" data-cat="european">🇪🇺 European</button>
     <button class="cat" data-cat="american">🇺🇸 American</button>
     <button class="cat" data-cat="trump">🏛️ Trump</button>
+  </div>
+
+  <div class="custom-row">
+    <input type="text" id="customInput" placeholder="Søg på dit eget emne… (f.eks. Bitcoin, climate, Musk)" maxlength="50" autocomplete="off">
+    <button id="customBtn">🔍 Søg</button>
   </div>
 
   <div class="controls">
@@ -375,6 +413,7 @@ const CATS = {
   european: { label:'European News', type:'hn',  lang:'en', q:'European' },
   american: { label:'American News', type:'hn',  lang:'en', q:'Congress' },
   trump:    { label:'Trump',         type:'hn',  lang:'en', q:'Trump' },
+  custom:   { label:'Custom',        type:'hn',  lang:'en', q:'' },
 };
 
 const STOP_EN = new Set([
@@ -439,40 +478,95 @@ function buildPool(headlines, cat) {
   return [...s];
 }
 
-// Fetch semantically similar words from Datamuse (free thesaurus API)
-async function fetchDatamuse(word) {
+// ── Wrong-answer engine ───────────────────────────────────────────────────
+
+// Detect morphological suffix (proxy for part-of-speech class)
+function morph(w) {
+  const s = w.toLowerCase();
+  for (const sfx of ['tion','sion','ment','ness','ity','ory','ary','ery','ing','ive','ous','ful','less','ism','ist','ize','ify','ated','al','ed','er','or','ly'])
+    if (s.endsWith(sfx)) return sfx;
+  return '';
+}
+
+// Score how plausible a candidate is as a wrong answer for `correct`
+function scoreCandidate(cand, correct) {
+  const ca = cand.toLowerCase(), cl = correct.toLowerCase();
+  let s = 0;
+  const m = morph(cl);
+  if (m && morph(ca) === m) s += 5;                         // same morphological class
+  s += Math.max(0, 4 - Math.abs(ca.length - cl.length));    // length similarity
+  if (ca[0] === cl[0]) s += 2;                              // same first letter
+  const capCa = cand[0] >= 'A' && cand[0] <= 'Z';
+  const capCl = correct[0] >= 'A' && correct[0] <= 'Z';
+  if (capCa === capCl) s += 2;                              // same capitalisation
+  if (ca.includes(cl) || cl.includes(ca)) s -= 8;           // substring overlap = too obvious
+  return s;
+}
+
+// Three parallel Datamuse queries per word:
+//   ml   = semantic neighbours (thesaurus)
+//   rel_trg = words topically triggered by this word
+//   lc   = words that grammatically fit AFTER the preceding word
+async function fetchDatamuse(word, lctx) {
   if (wrongCache.has(word)) return;
   try {
-    const url = `https://api.datamuse.com/words?ml=${encodeURIComponent(word)}&max=20`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(4000) }).then(r => r.json());
-    const cands = (res || [])
-      .map(x => x.word)
-      .filter(x => x.toLowerCase() !== word && !x.includes(' ') && /^[a-zA-Z]+$/.test(x));
+    const urls = [
+      `https://api.datamuse.com/words?ml=${encodeURIComponent(word)}&max=15`,
+      `https://api.datamuse.com/words?rel_trg=${encodeURIComponent(word)}&max=15`,
+    ];
+    if (lctx) urls.push(`https://api.datamuse.com/words?lc=${encodeURIComponent(lctx)}&max=20`);
+
+    const results = await Promise.allSettled(
+      urls.map(u => fetch(u, { signal: AbortSignal.timeout(4000) }).then(r => r.json()))
+    );
+    const seen = new Set([word]);
+    const cands = [];
+    results.forEach(r => {
+      if (r.status !== 'fulfilled') return;
+      (r.value || []).forEach(item => {
+        const w = (item.word || '').toLowerCase();
+        if (!seen.has(w) && !w.includes(' ') && /^[a-zA-Z]+$/.test(w)) {
+          seen.add(w);
+          cands.push(item.word || w);
+        }
+      });
+    });
     if (cands.length >= 2) wrongCache.set(word, cands);
   } catch {}
 }
 
-async function prefetchWrong(words) {
-  await Promise.all(words.map(fetchDatamuse));
+async function prefetchWrong(pairs) {
+  await Promise.all(pairs.map(({ word, lctx }) => fetchDatamuse(word, lctx)));
 }
 
-function wrongAnswers(correct, lang) {
+function wrongAnswers(correct, lang, inHeadline = new Set()) {
   const cl = correct.toLowerCase();
+  // Filter: not the answer, not visible in the headline, at least 3 chars, not a number
+  const ok = w => {
+    const wl = w.toLowerCase();
+    return wl !== cl && !inHeadline.has(wl) && w.length >= 3 && !/^\d/.test(w);
+  };
 
-  // 1. Datamuse thesaurus (English)
+  // 1. Score & rank Datamuse results (English)
   if (lang === 'en' && wrongCache.has(cl)) {
-    const from  = wrongCache.get(cl).filter(w => w.toLowerCase() !== cl);
-    const close = from.filter(w => Math.abs(w.length - correct.length) <= 4);
-    const src   = close.length >= 2 ? close : from;
-    if (src.length >= 2) return shuf(src).slice(0, 2);
+    const ranked = wrongCache.get(cl)
+      .filter(ok)
+      .map(w => ({ w, s: scoreCandidate(w, correct) }))
+      .sort((a, b) => b.s - a.s);
+    const good = ranked.filter(x => x.s >= 0).map(x => x.w);
+    if (good.length >= 2) return shuf(good.slice(0, 8)).slice(0, 2);
+    if (ranked.length >= 2) return shuf(ranked.slice(0, 6).map(x => x.w)).slice(0, 2);
   }
 
-  // 2. Pool with tight length match (±2 chars)
-  const tight = pool.filter(w => w.toLowerCase() !== cl && Math.abs(w.length - correct.length) <= 2);
-  if (tight.length >= 2) return shuf(tight).slice(0, 2);
+  // 2. Scored pool fallback (all languages)
+  const scored = pool
+    .filter(ok)
+    .map(w => ({ w, s: scoreCandidate(w, correct) }))
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 14);
+  if (scored.length >= 2) return shuf(scored.slice(0, 7)).slice(0, 2);
 
-  // 3. Pool with relaxed length (±4 chars)
-  return shuf(pool.filter(w => w.toLowerCase() !== cl && Math.abs(w.length - correct.length) <= 4)).slice(0, 2);
+  return shuf(pool.filter(w => w.toLowerCase() !== cl)).slice(0, 2);
 }
 
 function makeQ(h, cat) {
@@ -481,15 +575,23 @@ function makeQ(h, cat) {
   if (!words.length) return null;
   const sorted = [...words].sort((a, b) => clean(b).length - clean(a).length);
   const target = sorted[Math.floor(Math.random() * Math.min(3, sorted.length))];
-  const wrong  = wrongAnswers(clean(target), lang);
+  const tClean = clean(target);
+
+  // Exclude words already visible in the headline — user can see them, trivial to eliminate
+  const inHeadline = new Set(
+    h.title.split(/\s+/).map(w => clean(w).toLowerCase()).filter(Boolean)
+  );
+  inHeadline.delete(tClean.toLowerCase());
+
+  const wrong = wrongAnswers(tClean, lang, inHeadline);
   if (wrong.length < 2) return null;
-  const cl = clean(target).toLowerCase();
+  const cl = tClean.toLowerCase();
   let done = false;
   const html = h.title.split(' ').map(tok => {
     if (!done && clean(tok).toLowerCase() === cl) { done = true; return '<span class="blank"></span>'; }
     return esc(tok);
   }).join(' ');
-  return { html, answer: clean(target), opts: shuf([clean(target), ...wrong]), url: h.url };
+  return { html, answer: tClean, opts: shuf([tClean, ...wrong]), url: h.url };
 }
 
 // ── Fetch ─────────────────────────────────────────────────────────────────
@@ -589,14 +691,24 @@ async function loadCat(catKey, isRefresh = false) {
   const candidates = shuf(headlines.filter(h => quizWords(h.title, catKey).length >= 1));
   const batch      = candidates.slice(0, BATCH);
 
-  // Pre-fetch thesaurus alternatives for all potential quiz words (English only)
+  // Pre-fetch Datamuse alternatives for all potential quiz words (English only)
+  // Each word is paired with its left-context word so the lc= query fits the grammatical slot
   if (lang === 'en') {
-    const batchWords = new Set();
-    batch.forEach(h => quizWords(h.title, catKey).forEach(w => {
-      const c = clean(w).toLowerCase(); if (c) batchWords.add(c);
-    }));
+    const pairs = [];
+    const seen  = new Set();
+    batch.forEach(h => {
+      const toks = h.title.split(/\s+/);
+      const qws  = new Set(quizWords(h.title, catKey).map(w => clean(w).toLowerCase()));
+      toks.forEach((tok, i) => {
+        const c = clean(tok).toLowerCase();
+        if (!c || !qws.has(c) || seen.has(c)) return;
+        seen.add(c);
+        const lctx = i > 0 ? clean(toks[i - 1]).toLowerCase() : '';
+        pairs.push({ word: c, lctx });
+      });
+    });
     document.getElementById('loadMsg').textContent = 'Preparing questions…';
-    await prefetchWrong([...batchWords]);
+    await prefetchWrong(pairs);
   }
 
   queue  = batch.map(h => makeQ(h, catKey)).filter(Boolean);
@@ -845,6 +957,38 @@ document.querySelectorAll('.tpk').forEach(btn =>
 );
 
 applyTheme(localStorage.getItem('quiz-theme') || 't1');
+
+// ── Custom category ────────────────────────────────────────────────────────
+
+function submitCustom() {
+  const q = document.getElementById('customInput').value.trim();
+  if (!q) return;
+  CATS.custom.q     = q;
+  CATS.custom.label = q;
+
+  // Add or update a pill for the custom category
+  let btn = document.getElementById('customCatBtn');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.className    = 'cat';
+    btn.id           = 'customCatBtn';
+    btn.dataset.cat  = 'custom';
+    document.querySelector('.categories').appendChild(btn);
+  }
+  btn.textContent = `🔍 ${q}`;
+
+  document.querySelectorAll('.cat').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('refreshBtn').classList.add('visible');
+  tipHide();
+  clearInterval(timerTick);
+  loadCat('custom', false);
+}
+
+document.getElementById('customBtn').addEventListener('click', submitCustom);
+document.getElementById('customInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitCustom();
+});
 </script>
 </body>
 </html>

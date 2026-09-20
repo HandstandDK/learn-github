@@ -324,6 +324,7 @@
     <button class="cat" data-cat="danish">🇩🇰 Danish</button>
     <button class="cat" data-cat="european">🇪🇺 European</button>
     <button class="cat" data-cat="american">🇺🇸 American</button>
+    <button class="cat" data-cat="trump">🏛️ Trump</button>
   </div>
 
   <div class="controls">
@@ -373,6 +374,7 @@ const CATS = {
   danish:   { label:'Danish News',   type:'da',  lang:'da' },
   european: { label:'European News', type:'hn',  lang:'en', q:'European' },
   american: { label:'American News', type:'hn',  lang:'en', q:'Congress' },
+  trump:    { label:'Trump',         type:'hn',  lang:'en', q:'Trump' },
 };
 
 const STOP_EN = new Set([
@@ -813,6 +815,7 @@ const CAT_IMAGES = {
   danish:   'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=660&h=170&q=75',
   european: 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=660&h=170&q=75',
   american: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=660&h=170&q=75',
+  trump:    'https://images.unsplash.com/photo-1580128660010-fd027e1e587a?auto=format&fit=crop&w=660&h=170&q=75',
 };
 
 function updateCatImage() {
